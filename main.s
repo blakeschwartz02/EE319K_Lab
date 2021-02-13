@@ -59,7 +59,7 @@ Start
 ; voltmeter, scope on PD3
  ; Initialization goes here
     LDR R0,=GPIO_PORTE_DIR_R
-	LDRB R1, [R0]
+       LDRB R1, [R0]
 	AND R1, #0xFD
 	ORR R1, #0x04
 	STRB R1, [R0] ; PE1 is input, PE2 is output
@@ -67,6 +67,13 @@ Start
 	LDRB R1, [R0]
 	AND R1, #0xEF
 	STRB R1, [R0] ; PF4 is input
+
+       LDR R0,=SYSCTL_RCGCGPIO_R
+       LDRB R1, [R0]
+       ORR R1, #0x10
+       STRB R1, [R0] ; turn on clock for Port E
+       NOP
+       NOP ; wait for clock to stabalize
 	
 	
 
