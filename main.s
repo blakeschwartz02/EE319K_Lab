@@ -79,9 +79,12 @@ Start
        
 
      CPSIE  I    ; TExaS voltmeter, scope runs on interrupts
+       LDR R0,=GPIO_PORTE_DATA_R
 loop  
 ; main engine goes here
-     
+     LDR R1, [R0]
+     EOR R1, #0x4
+     STR R1, [R0]
 	 B    loop
      
 
