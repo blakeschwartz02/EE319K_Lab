@@ -82,6 +82,9 @@ Start
        LDR R0,=GPIO_PORTE_DATA_R
 loop  
 ; main engine goes here
+     MOV R0, #5000
+wait SUBS R0, R0 0x01
+     BNE wait   ; delay
      LDR R1, [R0]
      EOR R1, #0x4
      STR R1, [R0]
