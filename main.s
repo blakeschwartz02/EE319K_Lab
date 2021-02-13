@@ -61,46 +61,35 @@ Start
 
        LDR R0,=SYSCTL_RCGCGPIO_R
        LDRB R1, [R0]
-       ORR R1, #0x10
-       STRB R1, [R0] ; turn on clock for Port E and F
+       ORR R1, #0x10 ; set PE2 as output
+       STRB R1, [R0] ; turn on clock for Port E
        NOP
        NOP ; wait for clock to stabalize
 
        LDR R0,=GPIO_PORTE_DIR_R
-       LDRB R1, [R0]
-;	AND R1, #0xFD
+	   LDRB R1, [R0]
 	ORR R1, #0x04
-	STRB R1, [R0] ; PE1 is input, PE2 is output
+	STR R1, [R0] ; PE1 is input, PE2 is output
 	
 	LDR R0,=GPIO_PORTE_DEN_R
 	LDRB R1, [R0]
 	ORR R1, #0x04
-	STRB R1, [R0]
-	
-	
-;	LDR R0,=GPIO_PORTF_DIR_R
-;	LDRB R1, [R0]
-;	AND R1, #0xEF
-;	STRB R1, [R0] ; PF4 is input
-
-       
+	STR R1, [R0]    
 
      CPSIE  I    ; TExaS voltmeter, scope runs on interrupts
-     LDR R0,=GPIO_PORTE_DATA_R 
-loop  
+      
+loop 
 ; main engine goes here
-     
+	 LDR R0,=GPIO_PORTE_DATA_R
+	 MOV R1, #8000
 	 BL delay
-     LDR R2, [R0]
-     EOR R2, #0x04
+     EOR R2, #0x04	; toggle PE2
      STR R2, [R0]
 	 B    loop
      
-delay
-	 MOV R1, #5000
-wait SUBS R1, R1, #0x01
-     BNE wait   ; delay
-	 BX LR
+delay SUBS R1, R1, #0x01 
+      BNE delay   
+	  BX LR
       
      ALIGN      ; make sure the end of this section is aligned
      END        ; end of file
