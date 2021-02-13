@@ -66,7 +66,7 @@ Start
 	LDR R0,=GPIO_PORTF_DIR_R
 	LDRB R1, [R0]
 	AND R1, #0xEF
-	STRB R1, [R0] ; PF4 is output
+	STRB R1, [R0] ; PF4 is input
 	
 	
 
