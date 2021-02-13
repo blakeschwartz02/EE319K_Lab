@@ -58,7 +58,15 @@ Start
      BL  TExaS_Init
 ; voltmeter, scope on PD3
  ; Initialization goes here
-    LDR R0,=GPIO_PORTE_DIR_R
+
+       LDR R0,=SYSCTL_RCGCGPIO_R
+       LDRB R1, [R0]
+       ORR R1, #0x30
+       STRB R1, [R0] ; turn on clock for Port E and F
+       NOP
+       NOP ; wait for clock to stabalize
+
+       LDR R0,=GPIO_PORTE_DIR_R
        LDRB R1, [R0]
 	AND R1, #0xFD
 	ORR R1, #0x04
@@ -68,14 +76,7 @@ Start
 	AND R1, #0xEF
 	STRB R1, [R0] ; PF4 is input
 
-       LDR R0,=SYSCTL_RCGCGPIO_R
-       LDRB R1, [R0]
-       ORR R1, #0x10
-       STRB R1, [R0] ; turn on clock for Port E
-       NOP
-       NOP ; wait for clock to stabalize
-	
-	
+       
 
      CPSIE  I    ; TExaS voltmeter, scope runs on interrupts
 loop  
