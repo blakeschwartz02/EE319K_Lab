@@ -46,8 +46,8 @@ SYSCTL_RCGCGPIO_R  EQU 0x400FE608
        THUMB
        AREA    DATA, ALIGN=2
 ;global variables go here
-dOn    SPACE 4
-dOff   SPACE 4
+dOn    SPACE 4 ; variable for duty ON count
+dOff   SPACE 4 ; variable for duty OFF count
 
 
        AREA    |.text|, CODE, READONLY, ALIGN=2
@@ -66,7 +66,7 @@ Start
        ORR R1, #0x10
        STRB R1, [R0] ; turn on clock for Port E
        NOP
-       NOP ; wait for clock to stabalize
+       NOP ; wait for clock to stabilize
 
        LDR R0,=GPIO_PORTE_DIR_R
 	   LDRB R1, [R0]
@@ -82,8 +82,6 @@ Start
 
      CPSIE  I    ; TExaS voltmeter, scope runs on interrupts
       
-loop 
-; main engine goes here
      LDR R0,=GPIO_PORTE_DATA_R
 	 LDR R2, =dOn
 	 LDR R1, [R2]
@@ -93,7 +91,8 @@ loop
 	 LDR R1, [R2]
 	 MOV R1, #700 ; delay OFF = 70%
 	 STR R1, [R2] 
-normal	 
+loop 
+; main engine goes here	 
      LDR R2, [R0]
 	 AND R5, R2, #0x02 ; store initial PE1 bit
 	 ORR R2, #0x04 ; set PE2 high
@@ -112,11 +111,11 @@ again	 BL delay
 	 SUB R1, R1, #1
 	 CMP R1, #0
 	 BNE again
-	 
+	
 	 LDR R2, [R0]
 	 AND R6, R2, #0x02  ; isolate PE1 bit 
 	 CMP R5, R6	; see if PE1 was pressed, then unpressed
-	 BLS normal
+	 BLS loop
 	 LDR R2, =dOn
 	 LDR R1, [R2]
 	 CMP R1, #900 ; check if duty ON == 90%
@@ -127,26 +126,22 @@ again	 BL delay
 	 LDR R1, [R2]
 	 SUB R1, R1, #200 ; change duty OFF -= 20% 
 	 STR R1, [R2]
-next
 	 B    loop
      
 delay 
-	  MOV R7, #9000	; delay = 0.5 ms 
+	  MOV R7, #9500	; delay = 0.5 ms 
 go	  SUBS R7, R7, #0x01 
       BNE go   
 	  BX LR
 	  
-at90  LDR R2, =dOn
-	  LDR R1, [R2]
-	  MOV R1, #100
+at90  
+	  MOV R1, #100 ; change duty ON = 10%
       STR R1, [R2]
-	  BL delay
 	  LDR R2, =dOff
 	  LDR R1, [R2]
-	  MOV R1, #900
+	  MOV R1, #900 ; change duty OFF = 90% 
 	  STR R1, [R2]
-	  BL delay
-	  B next   ; change to duty ON = 10%, duty OFF = 90%
+	  B loop   
 	  
       
      ALIGN      ; make sure the end of this section is aligned
