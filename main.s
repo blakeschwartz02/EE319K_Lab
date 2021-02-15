@@ -46,6 +46,8 @@ SYSCTL_RCGCGPIO_R  EQU 0x400FE608
        THUMB
        AREA    DATA, ALIGN=2
 ;global variables go here
+dOn    SPACE 4
+dOff   SPACE 4
 
 
        AREA    |.text|, CODE, READONLY, ALIGN=2
@@ -82,52 +84,67 @@ Start
       
 loop 
 ; main engine goes here
-normal  LDR R0,=GPIO_PORTE_DATA_R
-	 LDR R2, [R0]
+     LDR R0,=GPIO_PORTE_DATA_R
+	 LDR R2, =dOn
+	 LDR R1, [R2]
+	 MOV R1, #300	; duty ON = 30% 
+	 STR R1, [R2]
+	 LDR R2, =dOff
+	 LDR R1, [R2]
+	 MOV R1, #700 ; delay OFF = 70%
+	 STR R1, [R2] 
+normal	 
+     LDR R2, [R0]
 	 AND R5, R2, #0x02 ; store initial PE1 bit
 	 ORR R2, #0x04 ; set PE2 high
 	 STR R2, [R0]
-	 LDR R1, [R3]
-	 MOV R1, #3250 ; delay for 150 ms 
-	 STR R1, [R3]	   ; store duty ON delay value 
-	 BL delay
+	 LDR R1, =dOn
+	 LDR R1, [R1]
+continue	 BL delay
+	 SUB R1, R1, #1
+	 CMP R1, #0 
+	 BNE continue
 	 AND R2, #0xFB ; set PE2 low 
 	 STR R2, [R0]
-	 LDR R4, [R4]
-	 MOV R4, #0
-	 STR R4, [R4]
-	 LDR R1, [R4]
-	 MOV R1, #6750 ; delay for 350 ms 
-	 STR R1, [R4]    ; store duty OFF delay value 
-	 BL delay
+	 LDR R1, =dOff
+	 LDR R1, [R1]
+again	 BL delay
+	 SUB R1, R1, #1
+	 CMP R1, #0
+	 BNE again
 	 
 	 LDR R2, [R0]
 	 AND R6, R2, #0x02  ; isolate PE1 bit 
 	 CMP R5, R6	; see if PE1 was pressed, then unpressed
-	 BLE normal
-	 LDR R1, [R3]
-	 CMP R1, #8000 ; check if duty ON == 90%
+	 BLS normal
+	 LDR R2, =dOn
+	 LDR R1, [R2]
+	 CMP R1, #900 ; check if duty ON == 90%
 	 BEQ at90  
-	 ADD R1, R1, #2166 ; change duty ON += 20%
-	 STR R1, [R3]
-	 BL delay
-	 LDR R1, [R4]
-	 SUB R1, R1, #2166 ; change duty OFF -= 20% 
-	 STR R1, [R4]
-	 BL delay
+	 ADD R1, R1, #200 ; change duty ON += 20%
+	 STR R1, [R2]
+	 LDR R2, =dOff
+	 LDR R1, [R2]
+	 SUB R1, R1, #200 ; change duty OFF -= 20% 
+	 STR R1, [R2]
 next
 	 B    loop
      
-delay SUBS R1, R1, #0x01 
-      BNE delay   
+delay 
+	  MOV R7, #9000	; delay = 0.5 ms 
+go	  SUBS R7, R7, #0x01 
+      BNE go   
 	  BX LR
 	  
-at90  MOV R1, #2000
-      STR R1, [R3]
+at90  LDR R2, =dOn
+	  LDR R1, [R2]
+	  MOV R1, #100
+      STR R1, [R2]
 	  BL delay
-	  LDR R1, [R4]
-	  MOV R1, #8000
-	  STR R1, [R4]
+	  LDR R2, =dOff
+	  LDR R1, [R2]
+	  MOV R1, #900
+	  STR R1, [R2]
 	  BL delay
 	  B next   ; change to duty ON = 10%, duty OFF = 90%
 	  
