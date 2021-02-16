@@ -49,6 +49,8 @@ SYSCTL_RCGCGPIO_R  EQU 0x400FE608
 dOn    SPACE 4 ; variable for duty ON count
 dOff   SPACE 4 ; variable for duty OFF count
 
+BdOn   SPACE 4 
+BdOff  SPACE 4
 
        AREA    |.text|, CODE, READONLY, ALIGN=2
        THUMB
@@ -97,7 +99,13 @@ loop
 	 AND R5, R2, #0x02 ; store initial PE1 bit
 	 ORR R2, #0x04 ; set PE2 high
 	 STR R2, [R0]
-	 LDR R1, =dOn
+	 MOV R8, R8, #18
+	 
+	 LDR R4, [R3] 
+	 CMP R4, #0 ; see if PF4 is pressed
+	 BEQ breathing
+
+back	 LDR R1, =dOn
 	 LDR R1, [R1]
 continue	 BL delay
 	 SUB R1, R1, #1
@@ -142,6 +150,32 @@ at90
 	  MOV R1, #900 ; change duty OFF = 90% 
 	  STR R1, [R2]
 	  B loop   
+	  
+breathing 
+	  LDR R2, =BdOn 
+	  LDR R1, [R2]
+	  MOV R1, #100 
+	  STR R1, [R2]
+more  PUSH {LR, R9}
+	  BL delay
+	  POP {LR, R9}
+	  LDR R2, =BdOff 
+	  LDR R1, [R2]
+	  MOV R1, #900
+	  STR R1, [R2]
+	  PUSH {LR, R9}
+	  BL delay 
+	  POP {LR, R9} 
+	  SUB R8, R8, #1 
+	  CMP R8, #0 
+	  BNE more
+	  
+	 LDR R4, [R3] 
+	 CMP R4, #0 ; see if PF4 is still pressed
+     BNE back	 
+	  
+	  
+	  
 	  
       
      ALIGN      ; make sure the end of this section is aligned
