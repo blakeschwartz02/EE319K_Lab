@@ -63,16 +63,15 @@ Start
 ; voltmeter, scope on PD3
  ; Initialization goes here
 
-       LDR R0,=SYSCTL_RCGCGPIO_R
-       LDRB R1, [R0]
-       ORR R1, #0x10
-       STRB R1, [R0] ; turn on clock for Port E
-       NOP
-       NOP ; wait for clock to stabilize
-
-       LDR R0,=GPIO_PORTE_DIR_R
-	   LDRB R1, [R0]
-	   AND R1, #0xFD ; set PE1 as input 
+    LDR R0,=SYSCTL_RCGCGPIO_R
+    LDRB R1, [R0]
+    ORR R1, #0x30
+    STRB R1, [R0] ; turn on clock for Port E and F
+    NOP
+    NOP ; wait for clock to stabilize
+	LDR R0,=GPIO_PORTE_DIR_R
+	LDRB R1, [R0]
+    AND R1, #0xFD ; set PE1 as input 
 	ORR R1, #0x04
 	STR R1, [R0] ; PE1 is input, PE2 is output
 	
@@ -81,10 +80,25 @@ Start
 	ORR R1, #0x06	; set bits being used (PE1, PE2)
 	STR R1, [R0]    
 	
+	LDR R0, =GPIO_PORTF_DIR_R
+	LDRB R1, [R0]
+	AND R1, #0xEF ; set PF4 as input 
+	STR R1, [R0]
+	
+	LDR R0, =GPIO_PORTF_DEN_R
+	LDRB R1, [R0]
+	ORR R1, #0x10 ; set PF4 bit 
+	STR R1, [R0]
+	
+	LDR R0, =GPIO_PORTF_PUR_R
+	LDR R1, [R0]
+	MOV R1, #0x11 ; activate pull up on PF4
+	STR R1, [R0]
 
      CPSIE  I    ; TExaS voltmeter, scope runs on interrupts
       
      LDR R0,=GPIO_PORTE_DATA_R
+	 LDR R3,=GPIO_PORTF_DATA_R
 	 LDR R2, =dOn
 	 LDR R1, [R2]
 	 MOV R1, #300	; duty ON = 30% 
@@ -93,19 +107,33 @@ Start
 	 LDR R1, [R2]
 	 MOV R1, #700 ; delay OFF = 70%
 	 STR R1, [R2] 
+
+; ----------------------------------------------------------------------
 loop 
 ; main engine goes here	 
      LDR R2, [R0]
 	 AND R5, R2, #0x02 ; store initial PE1 bit
-	 ORR R2, #0x04 ; set PE2 high
-	 STR R2, [R0]
-	 MOV R8, R8, #18
+	 
+	 LDR R2, =BdOn 
+	 LDR R1, [R2]
+	 MOV R1, #2 ; set initial breathing delay ON value 
+	 STR R1, [R2] 
+	 
+	 LDR R2, =BdOff 
+	 LDR R1, [R2]
+	 MOV R1, #18 ; set initial breathing delay OFF value 
+	 STR R1, [R2] 
+	 
+;	 MOV R6, #1 
 	 
 	 LDR R4, [R3] 
 	 CMP R4, #0 ; see if PF4 is pressed
 	 BEQ breathing
-
-back	 LDR R1, =dOn
+	 
+	 LDR R2, [R0]
+	 ORR R2, #0x04 ; set PE2 high
+	 STR R2, [R0]
+	 LDR R1, =dOn
 	 LDR R1, [R1]
 continue	 BL delay
 	 SUB R1, R1, #1
@@ -152,29 +180,80 @@ at90
 	  B loop   
 	  
 breathing 
+      MOV R8, #75 ; set breathing delay loop count 
+	  
+breathe
+      LDR R2, [R0]
+	  ORR R2, #0x04 ; set PE2 high
+	  STR R2, [R0]	
 	  LDR R2, =BdOn 
 	  LDR R1, [R2]
-	  MOV R1, #100 
-	  STR R1, [R2]
-more  PUSH {LR, R9}
-	  BL delay
-	  POP {LR, R9}
-	  LDR R2, =BdOff 
-	  LDR R1, [R2]
-	  MOV R1, #900
-	  STR R1, [R2]
-	  PUSH {LR, R9}
-	  BL delay 
-	  POP {LR, R9} 
-	  SUB R8, R8, #1 
-	  CMP R8, #0 
+	  
+      PUSH {LR, R9}
+more  BL delay
+	  SUB R1, R1, #1 
+	  CMP R1, #0 
 	  BNE more
+	  POP {LR, R9}
+	  
+	  LDR R2, [R0]
+	  AND R2, #0xFB ; set PE2 low 
+	  STR R2, [R0]
+	  LDR R2, =BdOff
+	  LDR R1, [R2]  
+      PUSH {LR, R9}
+going BL delay  
+	  SUB R1, R1, #1 
+	  CMP R1, #0 
+	  BNE going
+	  POP {LR, R9}
+	  
+	  SUB R8, R8, #1
+	  CMP R8, #0
+	  BNE breathe  ; has duty cycles gone through N loops? 
 	  
 	 LDR R4, [R3] 
 	 CMP R4, #0 ; see if PF4 is still pressed
-     BNE back	 
+     BNE loop	 
 	  
-	  
+	 LDR R2, =BdOn 
+	 LDR R1, [R2]
+	 CMP R1, #18    ; see if at max breathing duty cycle ON
+	 BEQ decrease 
+
+;	 CMP R6, #0
+;	 BEQ decrease 
+	 
+;increase 	 
+	 ADD R1, R1, #1 ; change breathing duty ON +=  
+	 STR R1, [R2]
+	 
+;	 CMP R1, #2 
+;	 BNE up 
+;	 MOV R6, #0 
+	 
+;up	 
+     LDR R2, =BdOff
+	 LDR R1, [R2]
+	 SUB R1, R1, #1 ; change breathing duty OFF -= 
+	 STR R1, [R2]
+	 BX LR
+	 
+decrease
+;	MOV R6, #0
+	SUB R1, R1, #1 ; breathing duty ON -= 
+	STR R1, [R2]
+	
+;	CMP R1, #2
+;	BNE down 
+;	MOV R6, #1
+	
+;down
+    LDR R2, =BdOff 
+	LDR R1, [R2]
+	ADD R1, R1, #1 ; breathing duty OFF +=  
+	STR R1, [R2]
+	B breathing
 	  
 	  
       
