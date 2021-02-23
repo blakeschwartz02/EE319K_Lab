@@ -124,7 +124,7 @@ loop
 	 MOV R1, #18 ; set initial breathing delay OFF value 
 	 STR R1, [R2] 
 	 
-;	 MOV R6, #1 
+	 MOV R6, #1 ; set breathing flag to increase 
 	 
 	 LDR R4, [R3] 
 	 CMP R4, #0 ; see if PF4 is pressed
@@ -180,7 +180,7 @@ at90
 	  B loop   
 	  
 breathing 
-      MOV R8, #75 ; set breathing delay loop count 
+      MOV R8, #100 ; set breathing delay loop count 
 	  
 breathe
       LDR R2, [R0]
@@ -200,10 +200,11 @@ more  BL delay
 	  AND R2, #0xFB ; set PE2 low 
 	  STR R2, [R0]
 	  LDR R2, =BdOff
-	  LDR R1, [R2]  
+	  LDR R1, [R2] 
+
       PUSH {LR, R9}
 going BL delay  
-	  SUB R1, R1, #1 
+	  SUB R1, R1, #1 	 
 	  CMP R1, #0 
 	  BNE going
 	  POP {LR, R9}
@@ -219,36 +220,32 @@ going BL delay
 	 LDR R2, =BdOn 
 	 LDR R1, [R2]
 	 CMP R1, #18    ; see if at max breathing duty cycle ON
-	 BEQ decrease 
+;	 BEQ decrease
+	 BNE increase
+	 MOV R6, #0
+	 B decrease
+	 
+increase	
+	 CMP R6, #0		; is flag set to decrease?
+	 BEQ decrease
 
-;	 CMP R6, #0
-;	 BEQ decrease 
-	 
-;increase 	 
 	 ADD R1, R1, #1 ; change breathing duty ON +=  
-	 STR R1, [R2]
-	 
-;	 CMP R1, #2 
-;	 BNE up 
-;	 MOV R6, #0 
-	 
-;up	 
+	 STR R1, [R2]	 
      LDR R2, =BdOff
 	 LDR R1, [R2]
 	 SUB R1, R1, #1 ; change breathing duty OFF -= 
 	 STR R1, [R2]
-	 BX LR
+	 B breathing
 	 
 decrease
-;	MOV R6, #0
+	CMP R1, #2 ; see if at min breathing duty cycle ON 
+	BNE down 
+	MOV R6, #1 ; set flag to increase
+    B increase
+down	
 	SUB R1, R1, #1 ; breathing duty ON -= 
 	STR R1, [R2]
 	
-;	CMP R1, #2
-;	BNE down 
-;	MOV R6, #1
-	
-;down
     LDR R2, =BdOff 
 	LDR R1, [R2]
 	ADD R1, R1, #1 ; breathing duty OFF +=  
